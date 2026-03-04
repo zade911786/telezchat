@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<link rel="icon" type="image/png" href="telez.png"/>
+<link rel="apple-touch-icon" href="telez.png"/>
+<title>TeleZ – Fast & Secure Messaging</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;width:100%;font-family:'Space Grotesk',sans-serif;background:#17212b;color:#fff;overflow:hidden;}
+#bgCanvas{display:none;}
+#app{position:fixed;inset:0;z-index:10;display:flex;align-items:stretch;justify-content:stretch;}
+.screen{display:none;} .screen.active{display:flex;width:100%;height:100%;}
+
+/* LOADING */
+#loadScreen{width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:2.2rem;background:#17212b;}
+.load-logo-wrap{display:flex;align-items:center;gap:.9rem;animation:fadeUp .8s cubic-bezier(.22,1,.36,1) both;}
+.load-icon{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(26,150,212,.8),0 0 80px rgba(26,150,212,.3),inset 0 0 0 1px rgba(255,255,255,.15);position:relative;overflow:hidden;}
+.load-icon::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.22),transparent 55%);}
+.load-wm{font-size:3.2rem;font-weight:700;letter-spacing:-2px;background:linear-gradient(135deg,#5ac8fa,#2AABEE,#e8f4fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;}
+.jump-dots{display:flex;gap:.6rem;align-items:center;animation:fadeUp .8s .2s both;}
+.jdot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);animation:jump .95s ease-in-out infinite;}
+.jdot:nth-child(2){animation-delay:.2s;background:linear-gradient(135deg,#2AABEE,#1f8fe0);}
+.jdot:nth-child(3){animation-delay:.4s;background:linear-gradient(135deg,#5ac8fa,#2AABEE);}
+.jdot:nth-child(4){animation-delay:.6s;background:linear-gradient(135deg,#2AABEE,#e8f4fd);}
+@keyframes jump{0%,100%{transform:translateY(0)}45%{transform:translateY(-16px);}}
+.load-tagline{font-size:.82rem;font-weight:500;color:rgba(255,255,255,.28);letter-spacing:3px;text-transform:uppercase;animation:fadeUp .8s .35s both;}
+
+/* LOGO */
+.telez-logo{display:flex;align-items:center;gap:.7rem;animation:fadeUp .6s cubic-bezier(.22,1,.36,1) both;}
+.logo-icon-sm{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden;box-shadow:0 0 24px rgba(26,150,212,.7);}
+.logo-icon-sm::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 55%);}
+.logo-wm{font-size:2rem;font-weight:700;letter-spacing:-1.2px;background:linear-gradient(135deg,#5ac8fa,#2AABEE,#e8f4fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(90,200,250,.55));}
+
+/* JOIN */
+#joinScreen{width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:1.6rem;padding:1.5rem;background:#17212b;}
+.login-box{width:min(400px,92vw);background:#212d3b;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:2.2rem 2rem 1.8rem;display:flex;flex-direction:column;align-items:center;gap:1.4rem;position:relative;overflow:hidden;animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both;}
+.login-box::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(42,171,238,.6),transparent);}
+.login-title{font-size:1.35rem;font-weight:700;color:#fff;text-align:center;letter-spacing:-.3px;}
+.login-sub{font-size:.8rem;color:rgba(255,255,255,.38);text-align:center;margin-top:-.85rem;}
+
+/* PROFILE AVATAR UPLOAD IN JOIN */
+.av-upload-wrap{position:relative;cursor:pointer;width:80px;height:80px;flex-shrink:0;}
+.av-upload-circle{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;overflow:hidden;box-shadow:0 0 24px rgba(42,171,238,.65),0 0 50px rgba(31,143,224,.25),0 0 0 3px rgba(42,171,238,.3);}
+.av-upload-circle img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.av-upload-btn{position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);border:2px solid #050e1a;display:flex;align-items:center;justify-content:center;font-size:.65rem;box-shadow:0 0 10px rgba(42,171,238,.6);}
+#avatarFileInput{display:none;}
+
+/* INPUTS */
+.zc-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.84rem 1.1rem;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:.92rem;font-weight:500;outline:none;transition:all .25s;}
+.zc-input:focus{border-color:rgba(42,171,238,.8);background:rgba(42,171,238,.1);box-shadow:0 0 0 3px rgba(42,171,238,.2),0 0 28px rgba(42,171,238,.18);}
+.zc-input::placeholder{color:rgba(255,255,255,.22);}
+
+/* BUTTONS */
+.btn-glow{width:100%;padding:.9rem;border-radius:12px;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:.93rem;font-weight:700;color:#fff;background:linear-gradient(135deg,#0d6ebc,#2AABEE,#1f8fe0);position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s;box-shadow:0 0 22px rgba(42,171,238,.75),0 0 55px rgba(42,171,238,.3);}
+.btn-glow::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent);opacity:0;transition:opacity .2s;}
+.btn-glow:hover{transform:translateY(-2px);box-shadow:0 0 35px rgba(42,171,238,.95),0 0 80px rgba(42,171,238,.5);}
+.btn-glow:hover::after{opacity:1;}
+.btn-glow:active{transform:scale(.97);}
+.btn-ghost{padding:.8rem 1.1rem;border-radius:12px;border:1px solid rgba(42,171,238,.38);background:rgba(42,171,238,.1);color:rgba(255,255,255,.75);font-family:'Space Grotesk',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 0 14px rgba(42,171,238,.22);}
+.btn-ghost:hover{color:#fff;border-color:rgba(42,171,238,.7);background:rgba(42,171,238,.22);box-shadow:0 0 26px rgba(42,171,238,.55);}
+.err-msg{color:#2AABEE;font-size:.78rem;text-align:center;min-height:.85rem;}
+
+/* CHAT SCREEN */
+#chatScreen{width:100%;height:100%;flex-direction:row;overflow:hidden;align-items:stretch;flex:1;}
+
+/* LEFT PANEL */
+.left-panel{width:320px;flex-shrink:0;height:100vh;background:url(background1.jpg) center/cover;border-right:none;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.left-top{padding:.9rem 1rem .65rem;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;background:rgba(33,45,59,.92);backdrop-filter:blur(12px);}
+.left-brand{display:flex;align-items:center;gap:.62rem;margin-bottom:.85rem;}
+.left-logo-mini{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(26,150,212,.6);}
+.left-wm{font-size:1.15rem;font-weight:800;letter-spacing:-.6px;background:linear-gradient(135deg,#5ac8fa,#2AABEE,#e8f4fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.left-user-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.55rem;}
+.my-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.74rem;overflow:hidden;cursor:pointer;}
+.my-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.my-username{font-size:.84rem;font-weight:600;}
+.left-actions{display:flex;gap:.3rem;margin-left:auto;}
+.icon-pill-btn{background:none;border:none;color:rgba(255,255,255,.28);font-size:.75rem;cursor:pointer;padding:.2rem .35rem;border-radius:6px;transition:all .15s;font-family:'Space Grotesk',sans-serif;}
+.icon-pill-btn:hover{color:#5ac8fa;}
+.settings-btn{width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:rgba(255,255,255,.32);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:.3rem;transition:color .15s;}
+.settings-btn:hover{color:#5ac8fa;}
+.panel-title{font-size:.66rem;font-weight:600;color:rgba(255,255,255,.22);letter-spacing:1.5px;text-transform:uppercase;}
+.leave-link{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.18);font-size:.68rem;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:color .15s;}
+.leave-link:hover{color:#2AABEE;}
+
+/* SETTINGS MODAL */
+.settings-overlay{display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.78);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center;}
+.settings-overlay.show{display:flex;animation:fadeIn .18s ease;}
+.settings-sheet{background:#17212b;border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;padding:1.4rem 1.5rem calc(1.8rem + env(safe-area-inset-bottom));width:100%;max-width:480px;animation:slideUp .26s cubic-bezier(.22,1,.36,1) both;max-height:82vh;overflow-y:auto;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;}
+.sheet-title{font-size:.92rem;font-weight:700;background:linear-gradient(135deg,#5ac8fa,#2AABEE);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sheet-close{background:none;border:none;color:rgba(255,255,255,.3);font-size:1.05rem;cursor:pointer;transition:color .15s;}
+.sheet-close:hover{color:#2AABEE;}
+.sheet-section{margin-bottom:1.2rem;}
+.sheet-section-label{font-size:.66rem;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:.6rem;}
+.settings-profile-row{display:flex;align-items:center;gap:.85rem;margin-bottom:.4rem;}
+.settings-av{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;overflow:hidden;cursor:pointer;flex-shrink:0;position:relative;}
+.settings-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.settings-av-edit{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:.72rem;opacity:0;transition:opacity .18s;border-radius:50%;}
+.settings-av:hover .settings-av-edit{opacity:1;}
+.settings-profile-info{flex:1;}
+.settings-display-name{font-size:.88rem;font-weight:700;}
+.settings-display-sub{font-size:.7rem;color:rgba(255,255,255,.28);margin-top:.08rem;}
+.sheet-signout{width:100%;padding:.72rem;border-radius:12px;border:1px solid rgba(42,171,238,.22);background:rgba(42,171,238,.06);color:#2AABEE;font-family:'Space Grotesk',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.2rem;}
+.sheet-signout:hover{background:rgba(42,171,238,.14);}
+
+/* LANG PICKER */
+.lang-section{width:100%;display:flex;flex-direction:column;gap:.5rem;}
+.lang-section-label{font-size:.7rem;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:1.2px;text-transform:uppercase;}
+.lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;width:100%;}
+.lang-opt{padding:.55rem .6rem;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);font-family:'Space Grotesk',sans-serif;font-size:.73rem;font-weight:600;cursor:pointer;text-align:center;transition:all .18s;line-height:1.3;}
+.lang-opt:hover{border-color:rgba(42,171,238,.5);color:rgba(255,255,255,.85);background:rgba(42,171,238,.1);}
+.lang-opt.active{border-color:rgba(42,171,238,.8);background:rgba(42,171,238,.2);color:#fff;}
+.lang-opt .lf{display:block;font-size:.9rem;margin-bottom:.1rem;}
+.lang-opt.full-row{grid-column:1/-1;}
+
+/* CONV LIST */
+.conv-list{flex:1;overflow-y:auto;padding:.25rem 0;}
+.conv-list::-webkit-scrollbar{width:0;}
+.conv-item{display:flex;align-items:center;gap:.7rem;padding:.55rem .9rem;cursor:pointer;transition:background .1s;position:relative;}
+.conv-item:hover{background:rgba(255,255,255,.08);}
+.conv-item.active{background:rgba(43,82,120,.85);backdrop-filter:blur(4px);}
+
+.conv-av-wrap{position:relative;flex-shrink:0;}
+.sring{position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE,#1f8fe0);z-index:0;}
+.sring-inner{position:absolute;inset:2px;border-radius:50%;background:transparent;z-index:1;}
+.conv-av{position:relative;z-index:2;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;overflow:hidden;}
+.conv-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.online-badge{position:absolute;bottom:1px;right:1px;z-index:3;width:10px;height:10px;background:#4ade80;border-radius:50%;border:2px solid #212d3b;}
+.conv-info{flex:1;min-width:0;}
+.conv-name{font-size:.86rem;font-weight:600;margin-bottom:.08rem;}
+.conv-prev{font-size:.72rem;color:rgba(255,255,255,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv-time{font-size:.65rem;color:rgba(255,255,255,.35);flex-shrink:0;}
+.no-convs{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;color:rgba(255,255,255,.18);font-size:.76rem;padding:2rem;}
+.no-convs-icon{font-size:1.8rem;margin-bottom:.2rem;}
+
+/* RIGHT PANEL - pure black like IG DMs */
+.right-panel{flex:1;display:flex;flex-direction:column;height:100vh;background:url(background.jpg) center/cover;min-width:0;overflow:hidden;position:relative;}
+.pick-conv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;color:rgba(255,255,255,.22);background:url(background.jpg) center/cover;}
+.pick-logo-wrap{display:flex;flex-direction:column;align-items:center;gap:.7rem;margin-bottom:1rem;}
+.pick-logo-icon{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;box-shadow:0 0 50px rgba(26,150,212,.5),0 0 100px rgba(26,150,212,.2),inset 0 0 0 1px rgba(255,255,255,.12);}
+.pick-logo-name{font-size:2.2rem;font-weight:800;letter-spacing:-1.5px;background:linear-gradient(135deg,#5ac8fa,#2AABEE,#e8f4fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.pick-title{font-size:.92rem;font-weight:700;color:rgba(255,255,255,.8);}
+.pick-sub{font-size:.74rem;color:rgba(255,255,255,.25);}
+
+/* HEADER - clean IG style */
+.chat-header{padding:.65rem 1rem;background:rgba(33,45,59,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:.72rem;flex-shrink:0;box-shadow:0 1px 8px rgba(0,0,0,.4);}
+.chat-hdr-av{width:42px;height:42px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#1a7fd4,#2AABEE,#1f8fe0);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;position:relative;overflow:hidden;box-shadow:0 0 0 2px rgba(42,171,238,.4);}
+.chat-hdr-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.od{position:absolute;bottom:1px;right:1px;width:8px;height:8px;background:#4ade80;border-radius:50%;border:2px solid #212d3b;}
+.chat-hdr-info{flex:1;min-width:0;}
+.chat-hdr-name{font-size:.95rem;font-weight:700;letter-spacing:0;}
+.chat-hdr-status{font-size:.7rem;color:#2AABEE;margin-top:.02rem;font-weight:500;}
+
+/* Typing indicator in header */
+.typing-indicator{display:none;align-items:center;gap:3px;margin-top:.03rem;}
+.typing-indicator.show{display:flex;}
+.typing-indicator span{font-size:.67rem;color:rgba(90,200,250,.65);}
+.tdot{width:4px;height:4px;border-radius:50%;background:#5ac8fa;animation:tdot .9s ease-in-out infinite;}
+.tdot:nth-child(2){animation-delay:.15s;}
+.tdot:nth-child(3){animation-delay:.3s;}
+@keyframes tdot{0%,100%{transform:translateY(0);opacity:.4}45%{transform:translateY(-4px);opacity:1;}}
+
+.hdr-icons{display:flex;gap:.2rem;}
+.hdr-icon-btn{width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.6);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;transition:all .15s;}
+.hdr-icon-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+
+/* MESSAGES AREA */
+.msgs-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:.6rem .9rem .4rem;display:flex;flex-direction:column;gap:.22rem;scroll-behavior:smooth;min-height:0;-webkit-overflow-scrolling:touch;background:url(background.jpg) center/cover fixed;}
+.msgs-area::-webkit-scrollbar{width:0;}
+.day-divider{display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.18);font-size:.62rem;margin:.45rem 0 .12rem;font-weight:500;}
+
+/* Typing bubble */
+.typing-bubble-row{display:flex;align-items:flex-end;gap:.3rem;animation:popIn .18s ease both;}
+.typing-bubble{background:#182533;border-radius:4px 18px 18px 18px;padding:.52rem .82rem;display:flex;align-items:center;gap:5px;}
+.tb-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);animation:tbd 1s ease-in-out infinite;}
+.tb-dot:nth-child(2){animation-delay:.2s;}
+.tb-dot:nth-child(3){animation-delay:.4s;}
+@keyframes tbd{0%,100%{transform:translateY(0);opacity:.38;}45%{transform:translateY(-5px);opacity:1;}}
+
+/* ── INSTAGRAM-STYLE MESSAGE ROWS ── */
+.msg-row{display:flex;align-items:flex-end;gap:.28rem;position:relative;touch-action:pan-y;}
+.msg-row.outgoing{flex-direction:row-reverse;}
+.row-av{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:700;flex-shrink:0;opacity:0;overflow:hidden;}.msg-row.outgoing .row-av{display:none;}
+.row-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.row-av.show{opacity:1;}
+.bubble-wrap{display:flex;flex-direction:column;max-width:68%;align-items:flex-start;}
+.msg-row.outgoing .bubble-wrap{align-items:flex-end;margin-left:auto;}
+.swipe-hint{display:none;}
+
+/* Reply strip */
+.rp-wrap{background:rgba(255,255,255,.07);border-radius:12px 12px 0 0;border-left:2px solid rgba(42,171,238,.45);padding:.26rem .58rem;font-size:.67rem;color:rgba(255,255,255,.32);margin-bottom:-3px;}
+.msg-row.outgoing .rp-wrap{border-left:none;border-right:2px solid rgba(42,171,238,.45);text-align:right;}
+
+/* IG bubble shapes */
+.bubble{padding:.55rem .9rem;font-size:.9rem;line-height:1.5;word-break:break-word;border-radius:12px;}
+.incoming .bubble{background:rgba(24,37,51,.95);border-radius:4px 18px 18px 18px;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.outgoing .bubble{background:rgba(43,82,120,.95);border-radius:18px 4px 18px 18px;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.admin-msg .bubble{background:#1a3a5c;border-radius:4px 18px 18px 18px;}
+
+/* Media */
+.bubble img.chat-img,.bubble video{max-width:220px;max-height:180px;border-radius:14px;display:block;object-fit:cover;cursor:pointer;}
+
+/* Voice player */
+.voice-player{display:flex;align-items:center;gap:.4rem;padding:.42rem .62rem;min-width:172px;}
+.voice-play-btn{width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;}
+.voice-wave{flex:1;height:22px;display:flex;align-items:center;gap:1.5px;}
+.wave-bar{width:2.5px;border-radius:2px;background:rgba(255,255,255,.4);}
+.voice-dur{font-size:.62rem;color:rgba(255,255,255,.38);white-space:nowrap;}
+
+/* Footer: time + ticks */
+.bubble-footer{display:flex;align-items:center;gap:.18rem;margin-top:.07rem;padding:0 .03rem;}
+.msg-row.outgoing .bubble-footer{justify-content:flex-end;}
+.bubble-time{font-size:.59rem;color:rgba(255,255,255,.38);}
+.msg-ticks{font-size:.67rem;line-height:1;}
+.msg-ticks.sent{color:rgba(255,255,255,.28);}
+.msg-ticks.delivered{color:rgba(255,255,255,.48);}
+.msg-ticks.seen{color:#60a5fa;}
+
+/* Translate */
+.translate-btn{display:inline-flex;align-items:center;gap:.18rem;margin-top:.1rem;background:none;border:none;border-radius:7px;color:rgba(255,255,255,.22);font-size:.61rem;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:500;padding:.1rem .32rem;transition:all .15s;width:fit-content;align-self:flex-start;}
+.msg-row.outgoing .translate-btn{align-self:flex-end;}
+.translate-btn:hover{color:rgba(90,200,250,.72);background:rgba(42,171,238,.1);}
+.translate-btn[data-loading="1"]{opacity:.35;pointer-events:none;}
+.translation-box{margin-top:.1rem;background:rgba(255,255,255,.05);border-left:2px solid rgba(42,171,238,.35);border-radius:0 7px 7px 0;padding:.22rem .48rem;font-size:.75rem;color:rgba(255,255,255,.55);line-height:1.4;max-width:100%;}
+.translation-box.rtl{direction:rtl;font-family:'Vazirmatn',sans-serif;border-left:none;border-right:2px solid rgba(42,171,238,.35);border-radius:7px 0 0 7px;}
+.reply-action{margin-top:.06rem;background:none;border:none;color:rgba(255,255,255,.14);font-size:.6rem;cursor:pointer;font-family:'Space Grotesk',sans-serif;display:inline-flex;align-items:center;gap:.14rem;transition:color .15s;padding:.04rem 0;width:fit-content;}
+.reply-action:hover{color:rgba(90,200,250,.55);}
+.empty-chat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.38rem;color:rgba(255,255,255,.18);font-size:.76rem;}
+.empty-chat-av{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;margin-bottom:.35rem;overflow:hidden;}
+.empty-chat-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.empty-chat-name{font-size:.88rem;font-weight:700;color:#fff;}
+
+
+/* ── INSTAGRAM-STYLE INPUT BAR ── */
+.input-bar{
+  padding:.3rem .62rem calc(.44rem + env(safe-area-inset-bottom));
+  background:#000;
+  border-top:1px solid rgba(255,255,255,.07);
+  display:flex;flex-direction:column;gap:.22rem;
+  flex-shrink:0;position:sticky;bottom:0;width:100%;z-index:10;
+}
+.reply-banner{display:none;background:rgba(42,171,238,.09);border-radius:8px;padding:.26rem .62rem;font-size:.68rem;color:rgba(90,200,250,.7);align-items:center;justify-content:space-between;}
+.reply-banner.on{display:flex;}
+.cancel-reply{background:none;border:none;color:rgba(255,255,255,.26);font-size:.86rem;cursor:pointer;padding:0;line-height:1;transition:color .15s;}
+.cancel-reply:hover{color:#2AABEE;}
+.media-preview{display:none;align-items:center;gap:.4rem;padding:.1rem 0;}
+.media-preview.on{display:flex;}
+.media-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,.1);}
+.media-name{font-size:.66rem;color:rgba(255,255,255,.3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.remove-media{background:none;border:none;color:rgba(255,255,255,.24);border-radius:50%;width:18px;height:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;}
+.remove-media:hover{color:#2AABEE;}
+
+/* IG input row */
+.input-row{display:flex;align-items:center;gap:.28rem;}
+
+/* pill — IG style thin border */
+.input-pill{
+  flex:1;display:flex;align-items:center;gap:.1rem;
+  background:transparent;
+  border:1.5px solid rgba(255,255,255,.13);
+  border-radius:26px;
+  padding:.32rem .48rem .32rem .72rem;
+  transition:border-color .15s;
+  min-height:38px;
+}
+.input-pill:focus-within{border-color:rgba(255,255,255,.28);}
+
+.emoji-pill-btn{width:28px;height:28px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;}
+.emoji-pill-btn svg{width:20px;height:20px;}
+
+#msgInput{
+  flex:1;background:none;border:none;outline:none;
+  color:#fff;font-family:'Space Grotesk',sans-serif;
+  font-size:.88rem;font-weight:400;
+  resize:none;max-height:80px;line-height:1.44;min-height:20px;
+  padding:0 .25rem;
+}
+#msgInput::placeholder{color:rgba(255,255,255,.2);}
+
+/* pill-inner icon buttons (image, video inside pill) */
+.pill-inner-btn{width:28px!important;height:28px!important;border-radius:50%!important;background:none!important;padding:0;flex-shrink:0;}
+.pill-inner-btn svg{width:19px;height:19px;}
+
+/* outside-pill icon buttons */
+.inp-icon-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:all .15s;}
+.inp-icon-btn svg{display:block;flex-shrink:0;overflow:visible;}
+.inp-icon-btn:hover{background:rgba(42,171,238,.15);}
+.inp-icon-btn:active{transform:scale(.88);}
+.inp-icon-btn.recording{animation:recpulse .9s ease infinite;}
+.pill-inner-btn{width:30px!important;height:30px!important;}
+@keyframes recpulse{0%,100%{opacity:.6}50%{opacity:1;}}
+
+/* Send — purple circle like IG */
+.send-btn{
+  width:36px;height:36px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#1a7fd4,#2AABEE);
+  color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .18s;
+  box-shadow:0 0 12px rgba(42,171,238,.5);
+}
+.send-btn:hover{transform:scale(1.09);box-shadow:0 0 20px rgba(42,171,238,.75);}
+.send-btn:active{transform:scale(.91);}
+.send-btn svg{width:15px;height:15px;}
+
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;animation:fadeIn .18s ease;}
+.modal-box{background:#17212b;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:1.8rem;width:min(320px,88vw);display:flex;flex-direction:column;gap:.95rem;animation:scaleIn .22s cubic-bezier(.22,1,.36,1) both;box-shadow:0 30px 60px rgba(0,0,0,.75);position:relative;overflow:hidden;}
+.modal-box::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(42,171,238,.55),rgba(31,143,224,.35),transparent);}
+.modal-ttl{font-size:.94rem;font-weight:700;background:linear-gradient(135deg,#5ac8fa,#2AABEE);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.modal-sub{font-size:.74rem;color:rgba(255,255,255,.26);margin-top:-.58rem;}
+.modal-row{display:flex;gap:.48rem;}
+.modal-row .btn-ghost,.modal-row .btn-glow{flex:1;padding:.7rem;width:auto;}
+
+/* ZADE BTN */
+#zadeBtn{position:fixed;top:.82rem;right:.82rem;z-index:500;background:rgba(8,8,8,.92);border:1px solid rgba(42,171,238,.32);border-radius:20px;padding:.36rem .8rem;color:rgba(90,200,250,.65);font-family:'Space Grotesk',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.35rem;}
+#zadeBtn:hover{color:#5ac8fa;border-color:rgba(42,171,238,.6);}
+.zdot{width:5px;height:5px;border-radius:50%;background:linear-gradient(135deg,#1a7fd4,#2AABEE);flex-shrink:0;animation:zdpulse 2s infinite;}
+@keyframes zdpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+
+#toast{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:800;background:#212d3b;border:1px solid rgba(42,171,238,.25);color:#2AABEE;font-size:.72rem;padding:.46rem .95rem;border-radius:9px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
+
+/* MEDIA VIEWER */
+.media-viewer{display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.95);align-items:center;justify-content:center;}
+.media-viewer.open{display:flex;}
+.media-viewer img,.media-viewer video{max-width:90vw;max-height:90vh;border-radius:10px;}
+.mv-close{position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:1.1rem;cursor:pointer;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.mv-close:hover{background:rgba(42,171,238,.22);}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .left-panel{position:fixed;inset:0;z-index:50;width:100%!important;display:flex;background:url(background1.jpg) center/cover;}
+  .left-panel.conv-open{display:none!important;}
+  .right-panel{width:100%;}
+  .back-btn{display:flex!important;}
+}
+@media(min-width:769px){
+  .left-panel.conv-open{display:flex!important;}
+  #activeConv{position:relative!important;inset:auto!important;height:100%!important;}
+  .input-bar{position:relative!important;bottom:auto!important;}
+}
+@media(max-width:768px){#activeConv{position:fixed!important;inset:0!important;z-index:40!important;background:url(background.jpg) center/cover!important;}}
+.back-btn{display:none;width:29px;height:29px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.55);font-size:.95rem;cursor:pointer;align-items:center;justify-content:center;margin-right:.05rem;transition:all .15s;}
+.back-btn:hover{background:rgba(255,255,255,.07);color:#fff;}
+
+/* ANIMS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes popIn{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+
+/* ── REACTIONS ── */
+.reaction-bar{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}
+.reaction-chip{display:inline-flex;align-items:center;gap:3px;background:#1e2d3d;border:1px solid rgba(42,171,238,.2);border-radius:20px;padding:2px 8px;font-size:.75rem;cursor:pointer;transition:all .15s;user-select:none;}
+.reaction-chip:hover,.reaction-chip.mine{background:rgba(42,171,238,.2);border-color:rgba(42,171,238,.55);}
+.reaction-chip .rc{font-size:.85rem;}
+.reaction-chip .rn{font-size:.7rem;color:rgba(255,255,255,.6);font-weight:600;}
+.emoji-picker{position:fixed;z-index:600;background:#212d3b;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px;display:none;flex-wrap:wrap;gap:4px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:popIn .15s ease;}
+.emoji-picker.show{display:flex;}
+.ep-emoji{font-size:1.3rem;cursor:pointer;padding:4px;border-radius:8px;transition:background .1s;line-height:1;}
+.ep-emoji:hover{background:rgba(255,255,255,.1);}
+
+/* ── CONTEXT MENU ── */
+.ctx-menu{position:fixed;z-index:650;background:#212d3b;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:6px;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,.7);display:none;animation:popIn .15s ease;}
+.ctx-menu.show{display:block;}
+.ctx-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:9px;cursor:pointer;font-size:.83rem;font-weight:500;transition:background .1s;white-space:nowrap;}
+.ctx-item:hover{background:rgba(42,171,238,.12);}
+.ctx-item.danger{color:#2AABEE;}
+.ctx-item.danger:hover{background:rgba(42,171,238,.1);}
+.ctx-icon{font-size:1rem;width:18px;text-align:center;}
+
+/* ── SEARCH BAR ── */
+.search-bar{padding:.5rem .9rem;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(33,45,59,.88);display:none;}
+.search-bar.show{display:block;}
+.search-input{width:100%;background:#17212b;border:none;border-radius:20px;padding:.38rem .85rem;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:.82rem;outline:none;}
+.search-input::placeholder{color:rgba(255,255,255,.25);}
+.search-highlight{background:rgba(42,171,238,.4);border-radius:3px;}
+
+/* ── EDIT MESSAGE ── */
+.editing-banner{display:none;background:rgba(42,171,238,.12);border-radius:8px;padding:.32rem .7rem;font-size:.69rem;color:rgba(90,200,250,.75);align-items:center;justify-content:space-between;}
+.editing-banner.on{display:flex;}
+.bubble.edited::after{content:' · edited';font-size:.6rem;opacity:.4;margin-left:3px;}
+
+/* ── LINK PREVIEW ── */
+.link-preview{background:rgba(42,171,238,.08);border-left:2.5px solid #2AABEE;border-radius:0 10px 10px 0;padding:.45rem .7rem;margin-top:.35rem;cursor:pointer;transition:background .15s;max-width:100%;}
+.link-preview:hover{background:rgba(255,255,255,.09);}
+.lp-domain{font-size:.62rem;color:#2AABEE;margin-bottom:.18rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.lp-title{font-size:.8rem;font-weight:600;color:#fff;line-height:1.3;}
+.lp-desc{font-size:.7rem;color:rgba(255,255,255,.38);margin-top:.12rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+/* ── UNREAD BADGE ── */
+.unread-badge{background:linear-gradient(135deg,#1a7fd4,#2AABEE);color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center;flex-shrink:0;}
+
+/* ── PINNED MESSAGE ── */
+.pinned-bar{background:rgba(30,45,61,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(42,171,238,.2);padding:.42rem 1rem;display:none;align-items:center;gap:.6rem;cursor:pointer;flex-shrink:0;}
+.pinned-bar.show{display:flex;}
+.pinned-icon{font-size:.8rem;flex-shrink:0;color:rgba(90,200,250,.7);}
+.pinned-text{font-size:.72rem;color:rgba(255,255,255,.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pinned-name{font-size:.7rem;color:rgba(42,171,238,.85);font-weight:600;}
+
+/* ── BROADCAST BANNER (admin) ── */
+.broadcast-btn{width:100%;padding:.55rem;background:rgba(42,171,238,.12);border:1px solid rgba(42,171,238,.22);border-radius:10px;color:rgba(90,200,250,.75);font-family:'Space Grotesk',sans-serif;font-size:.76rem;font-weight:600;cursor:pointer;transition:all .18s;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+.broadcast-btn:hover{background:rgba(42,171,238,.22);color:#5ac8fa;}
+.broadcast-overlay{display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+.broadcast-overlay.show{display:flex;animation:fadeIn .18s ease;}
+.broadcast-box{background:#17212b;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:1.8rem;width:min(360px,88vw);display:flex;flex-direction:column;gap:.9rem;animation:scaleIn .22s ease both;}
+.broadcast-box textarea{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.8rem;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:.88rem;resize:none;height:100px;outline:none;}
+
+/* ── DISAPPEARING MESSAGES ── */
+.expire-badge{font-size:.55rem;color:rgba(255,165,0,.65);margin-left:4px;}
+
+/* ── SCROLL TO BOTTOM ── */
+.scroll-down-btn{position:absolute;bottom:70px;right:14px;width:34px;height:34px;border-radius:50%;background:#212d3b;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.4);transition:all .2s;}
+.scroll-down-btn.show{display:flex;}
+.scroll-down-btn .unread-count{position:absolute;top:-5px;right:-5px;background:#2AABEE;color:#fff;font-size:.55rem;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;}
+
+/* ── MUTE ── */
+.muted-icon{font-size:.65rem;color:rgba(255,255,255,.3);margin-left:3px;}
+
+.day-divider span,.day-divider{background:rgba(42,171,238,.15);backdrop-filter:blur(8px);color:rgba(255,255,255,.6);font-size:.68rem;font-weight:600;border-radius:12px;padding:.2rem .7rem;display:inline-block;}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<button id="zadeBtn" onclick="openAdminModal()"><span class="zdot"></span>Zade</button>
+
+<!-- Admin Modal -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal-box">
+    <div class="modal-ttl">⚡ Admin Access</div>
+    <div class="modal-sub">Enter your TeleZ admin credentials</div>
+    <input class="zc-input" type="text" id="aId" placeholder="User ID"/>
+    <input class="zc-input" type="password" id="aPw" placeholder="Password"/>
+    <div class="err-msg" id="aErr"></div>
+    <div class="modal-row">
+      <button class="btn-ghost" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-glow" onclick="doAdminLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Sheet -->
+<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-sheet">
+    <div class="sheet-header">
+      <div class="sheet-title">⚙️ Settings</div>
+      <button class="sheet-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="sheet-section">
+      <div class="sheet-section-label">Profile</div>
+      <div class="settings-profile-row">
+        <div class="settings-av" id="settingsAv" onclick="document.getElementById('settingsAvatarInput').click()">
+          <span id="settingsAvLetter">?</span>
+          <div class="settings-av-edit">📷</div>
+        </div>
+        <div class="settings-profile-info">
+          <div class="settings-display-name" id="settingsDisplayName">—</div>
+          <div class="settings-display-sub">Tap avatar to change picture</div>
+        </div>
+      </div>
+      <input type="file" id="settingsAvatarInput" accept="image/*" style="display:none"/>
+    </div>
+    <div class="sheet-section">
+      <div class="sheet-section-label">My language (translate to)</div>
+      <div class="lang-grid" id="settingsLangGrid">
+        <div class="lang-opt full-row active" data-lang="none" onclick="pickLang(this,'none',true)"><span class="lf">🚫</span>No translation</div>
+        <div class="lang-opt" data-lang="ar" onclick="pickLang(this,'ar',true)"><span class="lf">🇸🇦</span>Arabic عربي</div>
+        <div class="lang-opt" data-lang="fa" onclick="pickLang(this,'fa',true)"><span class="lf">🇮🇷</span>Persian فارسی</div>
+        <div class="lang-opt" data-lang="en" onclick="pickLang(this,'en',true)"><span class="lf">🇬🇧</span>English</div>
+        <div class="lang-opt" data-lang="es" onclick="pickLang(this,'es',true)"><span class="lf">🇪🇸</span>Español</div>
+        <div class="lang-opt" data-lang="ru" onclick="pickLang(this,'ru',true)"><span class="lf">🇷🇺</span>Русский</div>
+      </div>
+    </div>
+    <button class="sheet-signout" onclick="doLeave()">Sign out</button>
+  </div>
+</div>
+
+<!-- Media Viewer -->
+<div class="media-viewer" id="mediaViewer">
+  <button class="mv-close" onclick="closeViewer()">✕</button>
+  <div id="viewerContent"></div>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="fileImg" accept="image/*" style="display:none"/>
+<input type="file" id="fileVid" accept="video/*" style="display:none"/>
+<input type="file" id="avatarFileInput" accept="image/*" style="display:none"/>
+
+<div id="app">
+
+  <!-- LOADING -->
+  <div class="screen active" id="loadScreen">
+    <div class="load-logo-wrap">
+      <div class="load-icon"><svg width="44" height="44" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="tg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5ac8fa"/>
+      <stop offset="100%" stop-color="#2AABEE"/>
+    </linearGradient>
+  </defs>
+  <!-- Paper plane body -->
+  <path d="M6 28L50 8L34 48L26 36L42 18L14 34Z" fill="url(#tg1)"/>
+  <path d="M26 36L28 46L34 38Z" fill="rgba(255,255,255,.3)"/>
+  <path d="M14 34L26 36L28 30Z" fill="rgba(0,0,0,.15)"/>
+  <!-- Chat bubble dot -->
+  <circle cx="36" cy="20" r="7" fill="white" opacity=".95"/>
+  <circle cx="33" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="36" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="39" cy="20" r="1.5" fill="#2AABEE"/>
+  <path d="M29 24 L34 27 L31 27Z" fill="white" opacity=".95"/>
+</svg></div>
+      <div class="load-wm"><span style="color:#fff;font-weight:800">Tele</span><span style="color:#2AABEE;font-weight:800">Z</span></div>
+    </div>
+    <div class="jump-dots"><div class="jdot"></div><div class="jdot"></div><div class="jdot"></div><div class="jdot"></div></div>
+    <div class="load-tagline">Fast · Secure · Simple</div>
+  </div>
+
+  <!-- JOIN -->
+  <div class="screen" id="joinScreen">
+    <div class="telez-logo">
+      <div class="logo-icon-sm">
+<svg width="22" height="22" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5ac8fa"/>
+      <stop offset="100%" stop-color="#2AABEE"/>
+    </linearGradient>
+  </defs>
+  <path d="M6 28L50 8L34 48L26 36L42 18L14 34Z" fill="url(#tg2)"/>
+  <path d="M26 36L28 46L34 38Z" fill="rgba(255,255,255,.3)"/>
+  <path d="M14 34L26 36L28 30Z" fill="rgba(0,0,0,.15)"/>
+  <circle cx="36" cy="20" r="7" fill="white" opacity=".95"/>
+  <circle cx="33" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="36" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="39" cy="20" r="1.5" fill="#2AABEE"/>
+  <path d="M29 24 L34 27 L31 27Z" fill="white" opacity=".95"/>
+</svg>
+      </div>
+      <div class="logo-wm"><span style="color:#fff">Tele</span><span style="color:#2AABEE">Z</span></div>
+    </div>
+    <div class="login-box">
+      <div class="av-upload-wrap" onclick="document.getElementById('avatarFileInput').click()">
+        <div class="av-upload-circle" id="joinAvCircle"><span id="joinAvLetter">👤</span></div>
+        <div class="av-upload-btn">📷</div>
+      </div>
+      <div><div class="login-title">Welcome to TeleZ</div><div class="login-sub" style="margin-top:.38rem">Tap photo to set profile picture</div></div>
+      <input class="zc-input" type="text" id="nameInput" placeholder="Your name…" maxlength="30" style="width:100%"/>
+      <div class="lang-section">
+        <div class="lang-section-label">My language (translate to)</div>
+        <div class="lang-grid" id="joinLangGrid">
+          <div class="lang-opt full-row active" data-lang="none" onclick="pickLang(this,'none',false)"><span class="lf">🚫</span>No translation</div>
+          <div class="lang-opt" data-lang="ar" onclick="pickLang(this,'ar',false)"><span class="lf">🇸🇦</span>Arabic عربي</div>
+          <div class="lang-opt" data-lang="fa" onclick="pickLang(this,'fa',false)"><span class="lf">🇮🇷</span>Persian فارسی</div>
+          <div class="lang-opt" data-lang="en" onclick="pickLang(this,'en',false)"><span class="lf">🇬🇧</span>English</div>
+          <div class="lang-opt" data-lang="es" onclick="pickLang(this,'es',false)"><span class="lf">🇪🇸</span>Español</div>
+          <div class="lang-opt" data-lang="ru" onclick="pickLang(this,'ru',false)"><span class="lf">🇷🇺</span>Русский</div>
+        </div>
+      </div>
+      <div class="err-msg" id="joinErr"></div>
+      <button class="btn-glow" onclick="doJoin()">Continue →</button>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="screen" id="chatScreen">
+    <div class="left-panel" id="leftPanel">
+      <div class="left-top">
+        <div class="left-brand">
+          <div class="left-logo-mini">
+            <svg width="22" height="22" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5ac8fa"/>
+      <stop offset="100%" stop-color="#2AABEE"/>
+    </linearGradient>
+  </defs>
+  <path d="M6 28L50 8L34 48L26 36L42 18L14 34Z" fill="url(#tg2)"/>
+  <path d="M26 36L28 46L34 38Z" fill="rgba(255,255,255,.3)"/>
+  <path d="M14 34L26 36L28 30Z" fill="rgba(0,0,0,.15)"/>
+  <circle cx="36" cy="20" r="7" fill="white" opacity=".95"/>
+  <circle cx="33" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="36" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="39" cy="20" r="1.5" fill="#2AABEE"/>
+  <path d="M29 24 L34 27 L31 27Z" fill="white" opacity=".95"/>
+</svg>
+          </div>
+          <div class="left-wm"><span style="color:#fff">Tele</span><span style="color:#2AABEE">Z</span></div>
+        </div>
+        <div class="left-user-row">
+          <div class="my-av" id="myAv">Z</div>
+          <div class="my-username" id="myUsername">—</div>
+          <button class="leave-link" onclick="doLeave()">Sign out</button>
+          <button class="settings-btn" onclick="openSettings()" title="Settings">⚙</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+          <div class="panel-title" id="panelTitle">Messages</div>
+          <button onclick="toggleSearch()" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:.8rem;cursor:pointer;padding:2px 5px;border-radius:6px;transition:color .15s;" title="Search">🔍</button>
+        </div>
+        <div class="search-bar" id="searchBar">
+          <input class="search-input" id="searchInput" placeholder="Search messages…" oninput="doSearch(this.value)"/>
+        </div>
+      </div>
+      <div class="conv-list" id="convList">
+        <div class="no-convs"><div class="no-convs-icon">📭</div><span>No conversations yet</span></div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="pick-conv" id="pickConv">
+        <div class="pick-logo-wrap">
+          <div class="pick-logo-icon">
+            <svg width="52" height="52" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="tg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5ac8fa"/>
+      <stop offset="100%" stop-color="#2AABEE"/>
+    </linearGradient>
+  </defs>
+  <path d="M6 28L50 8L34 48L26 36L42 18L14 34Z" fill="url(#tg3)"/>
+  <path d="M26 36L28 46L34 38Z" fill="rgba(255,255,255,.3)"/>
+  <path d="M14 34L26 36L28 30Z" fill="rgba(0,0,0,.15)"/>
+  <circle cx="36" cy="20" r="7" fill="white" opacity=".95"/>
+  <circle cx="33" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="36" cy="20" r="1.5" fill="#2AABEE"/>
+  <circle cx="39" cy="20" r="1.5" fill="#2AABEE"/>
+  <path d="M29 24 L34 27 L31 27Z" fill="white" opacity=".95"/>
+</svg>
+          </div>
+          <div class="pick-logo-name"><span style="color:#fff;font-weight:800">Tele</span><span style="color:#2AABEE;font-weight:800">Z</span></div>
+        </div>
+        <div class="pick-title">Your Messages</div>
+        <div class="pick-sub">Select a conversation to start chatting</div>
+      </div>
+
+      <div id="activeConv" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
+        <div class="chat-header">
+          <button class="back-btn" onclick="showLeftPanel()">←</button>
+          <div class="chat-hdr-av" id="convAvatar"><span id="convAvatarLetter">?</span><div class="od"></div></div>
+          <div class="chat-hdr-info">
+            <div class="chat-hdr-name" id="convName">—</div>
+            <div class="chat-hdr-status" id="convStatus">Active now</div>
+            <div class="typing-indicator" id="typingIndicator">
+              <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+              <span>typing</span>
+            </div>
+          </div>
+          <div class="hdr-icons">
+            <button class="hdr-icon-btn" title="Voice call" onclick="showToast('Voice calls coming soon!')">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+            </button>
+            <button class="hdr-icon-btn" title="Video call" onclick="showToast('Video calls coming soon!')">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="1" y="6" width="14" height="12" rx="2"/><path d="M15 10.5L22 7v10l-7-3.5z" fill="currentColor" opacity=".6"/></svg>
+            </button>
+            <button class="hdr-icon-btn" title="Info" onclick="showConvInfo()">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8.5" stroke-width="2.5"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="pinned-bar" id="pinnedBar" onclick="scrollToPinned()">
+          <span class="pinned-icon">📌</span>
+          <div style="flex:1;min-width:0;"><div class="pinned-name">Pinned message</div><div class="pinned-text" id="pinnedText">—</div></div>
+          <button onclick="event.stopPropagation();unpinMsg()" style="background:none;border:none;color:rgba(255,255,255,.25);font-size:.8rem;cursor:pointer;">✕</button>
+        </div>
+        <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div class="msgs-area" id="msgsArea"></div>
+          <button class="scroll-down-btn" id="scrollDownBtn" onclick="scrollToBottom()">↓<span class="unread-count" id="unreadCount" style="display:none"></span></button>
+        </div>
+
+        <div class="input-bar">
+          <div class="editing-banner" id="editingBanner">
+            <span id="editingBannerText">✏️ Editing message</span>
+            <button class="cancel-reply" onclick="cancelEdit()">✕</button>
+          </div>
+          <div class="reply-banner" id="replyBanner">
+            <span id="replyBannerText">Replying…</span>
+            <button class="cancel-reply" onclick="cancelReply()">✕</button>
+          </div>
+          <div class="media-preview" id="mediaPreview">
+            <div id="mediaThumbWrap"></div>
+            <span class="media-name" id="mediaFileName"></span>
+            <button class="remove-media" onclick="clearMedia()">✕</button>
+          </div>
+          <div class="input-row">
+            <!-- Mic -->
+            <button class="inp-icon-btn" id="voiceBtn" title="Voice note">
+              <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8.5" y="1.5" width="7" height="12" rx="3.5" fill="#fff" opacity=".7"/>
+                <path d="M4.5 11.5a7.5 7.5 0 0 0 15 0" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round" fill="none"/>
+                <line x1="12" y1="19" x2="12" y2="22.5" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/>
+                <line x1="8.5" y1="22.5" x2="15.5" y2="22.5" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <!-- Pill -->
+            <div class="input-pill">
+              <textarea id="msgInput" rows="1" placeholder="Message…" onkeydown="onMsgKey(event)" oninput="onTyping(event)"></textarea>
+              <!-- Image -->
+              <button class="inp-icon-btn pill-inner-btn" id="imgBtn" title="Photo">
+                <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="4" width="20" height="16" rx="3" stroke="#fff" stroke-opacity=".7" stroke-width="1.8" fill="none"/>
+                  <circle cx="8" cy="9.5" r="2" fill="#fff" opacity=".7"/>
+                  <path d="M2.5 19.5 L8 13.5 l3.5 4 L15 12l6.5 7.5" stroke="#fff" stroke-opacity=".7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </button>
+              <!-- Video -->
+              <button class="inp-icon-btn pill-inner-btn" id="vidBtn" title="Video">
+                <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1.5" y="6" width="13" height="12" rx="2.5" stroke="#fff" stroke-opacity=".7" stroke-width="1.8" fill="none"/>
+                  <path d="M14.5 10.2 L22 7 L22 17 L14.5 13.8 Z" fill="#fff" opacity=".7"/>
+                </svg>
+              </button>
+            </div>
+            <!-- Send -->
+            <button class="send-btn" id="sendBtn">
+              <svg width="19" height="19" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21.5 2.5 L2 11 L10.5 13.5 L13.5 22 Z" fill="white"/>
+                <line x1="21.5" y1="2.5" x2="10.5" y2="13.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EMOJI PICKER -->
+<div class="emoji-picker" id="emojiPicker"></div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" onclick="ctxReply()"><span class="ctx-icon">↩</span>Reply</div>
+  <div class="ctx-item" onclick="ctxCopy()"><span class="ctx-icon">📋</span>Copy</div>
+  <div class="ctx-item" onclick="ctxEdit()"><span class="ctx-icon">✏️</span>Edit</div>
+  <div class="ctx-item" onclick="ctxPin()"><span class="ctx-icon">📌</span>Pin</div>
+  <div class="ctx-item" onclick="ctxReact()"><span class="ctx-icon">😊</span>React</div>
+  <div class="ctx-item danger" onclick="ctxDelete()"><span class="ctx-icon">🗑</span>Delete</div>
+</div>
+
+<!-- BROADCAST OVERLAY -->
+<div class="broadcast-overlay" id="broadcastOverlay">
+  <div class="broadcast-box">
+    <div style="font-size:.95rem;font-weight:700;background:linear-gradient(135deg,#5ac8fa,#2AABEE);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">📢 Broadcast to All</div>
+    <textarea id="broadcastInput" placeholder="Message to send to everyone…"></textarea>
+    <div style="display:flex;gap:.5rem;">
+      <button class="btn-ghost" onclick="closeBroadcast()" style="flex:1">Cancel</button>
+      <button class="btn-glow" onclick="sendBroadcast()" style="flex:1">Send to All</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+
+/* ═══ CONFIG ═══ */
+var SB_URL='https://orqbruccvgivwerfwkrf.supabase.co';
+var SB_KEY='sb_publishable_--5trF69q_gRUIdqMnOhyA_3sD0UNpw';
+var ADM_ID='999', ADM_PW='777', ADM_NM='Zade';
+var me=null, peer=null, replyMsg=null, poller=null, lastPoll=null;
+var pendingMedia=null, mediaRecorder=null, audioChunks=[], isRecording=false;
+var typingTimer=null, presencePoller=null;
+var notifGranted=false;
+var chosenLang='none'; // selected on join screen (or settings)
+
+/* ═══ localStorage session ═══ */
+function saveSession(){
+  if(!me) return;
+  try{ localStorage.setItem('zc_s3', JSON.stringify({name:me.name,isAdmin:!!me.isAdmin,avatar:me.avatar||null,lang:me.lang||'none'})); }catch(e){}
+}
+function loadSession(){ try{ var s=localStorage.getItem('zc_s3'); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function clearSession(){ try{ localStorage.removeItem('zc_s3'); }catch(e){} }
+
+/* ═══ LOADING ═══ */
+setTimeout(function(){
+  var saved=loadSession();
+  if(saved && saved.name){
+    me={name:saved.name, isAdmin:saved.isAdmin||false, avatar:saved.avatar||null, lang:saved.lang||'none'};
+    chosenLang=me.lang;
+    enterChat();
+  } else {
+    showScreen('joinScreen');
+  }
+}, 1800);
+
+/* ═══ SUPABASE ═══ */
+function sbFetch(path,opts){
+  opts=opts||{};
+  return fetch(SB_URL+'/rest/v1/'+path, Object.assign({},opts,{
+    headers: Object.assign({'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'}, opts.headers||{})
+  })).then(function(r){ return r.text().then(function(t){ if(!r.ok) throw new Error(t); return t?JSON.parse(t):[]; }); });
+}
+
+/* ═══ NOTIFICATIONS ═══ */
+function requestNotifPermission(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){ notifGranted=true; return; }
+  if(Notification.permission!=='denied'){
+    Notification.requestPermission().then(function(p){ notifGranted=(p==='granted'); });
+  }
+}
+function sendNotif(title, body, icon){
+  if(!notifGranted || document.hasFocus()) return;
+  try{
+    var n=new Notification(title,{body:body,icon:icon||'',badge:icon||''});
+    setTimeout(function(){n.close();},4000);
+  }catch(e){}
+}
+
+/* ═══ LANGUAGE PICKER ═══ */
+function pickLang(el, lang, isSettings){
+  var gridId=isSettings?'settingsLangGrid':'joinLangGrid';
+  document.querySelectorAll('#'+gridId+' .lang-opt').forEach(function(o){o.classList.remove('active');});
+  el.classList.add('active');
+  chosenLang=lang;
+  if(isSettings && me){ me.lang=lang; saveSession(); }
+}
+
+/* ═══ SETTINGS ═══ */
+function openSettings(){
+  if(!me) return;
+  document.getElementById('settingsDisplayName').textContent=me.name;
+  var sav=document.getElementById('settingsAv'), sl=document.getElementById('settingsAvLetter');
+  if(me.avatar){ sl.style.display='none'; var ei=sav.querySelector('img'); if(ei) ei.src=me.avatar; else{ var ni=document.createElement('img'); ni.src=me.avatar; ni.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0;'; sav.insertBefore(ni,sav.firstChild); } }
+  else { sl.style.display=''; sl.textContent=me.name[0].toUpperCase(); var ei2=sav.querySelector('img'); if(ei2) ei2.remove(); }
+  // sync lang grid
+  document.querySelectorAll('#settingsLangGrid .lang-opt').forEach(function(o){ o.classList.toggle('active',o.dataset.lang===(me.lang||'none')); });
+  document.getElementById('settingsOverlay').classList.add('show');
+}
+function closeSettings(){ document.getElementById('settingsOverlay').classList.remove('show'); }
+
+document.getElementById('settingsAvatarInput').addEventListener('change',function(){
+  var file=this.files[0]; if(!file) return;
+  if(file.size>3*1024*1024){ showToast('Photo too large (max 3MB)'); this.value=''; return; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    me.avatar=e.target.result; saveSession();
+    updateMyAvUI();
+    upsertPresence(false); // push avatar to Supabase
+    // update settings av
+    var sav=document.getElementById('settingsAv'), sl=document.getElementById('settingsAvLetter');
+    sl.style.display='none';
+    var ei=sav.querySelector('img'); if(ei) ei.src=e.target.result; else{ var ni=document.createElement('img'); ni.src=e.target.result; ni.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0;'; sav.insertBefore(ni,sav.firstChild); }
+  };
+  reader.readAsDataURL(file); this.value='';
+});
+
+/* ═══ PRESENCE (Supabase-backed typing + last seen + avatar) ═══ */
+function upsertPresence(typing){
+  if(!me||me.isAdmin) return;
+  sbFetch('presence?id=eq.'+encodeURIComponent(me.name),{
+    method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates'},
+    body:JSON.stringify({id:me.name, typing:!!typing, last_seen:new Date().toISOString(), avatar:me.avatar||null})
+  }).catch(function(){});
+}
+
+function pollPresence(){
+  if(!me) return;
+  var watchName=me.isAdmin?peer:ADM_NM;
+  if(!watchName) return;
+  sbFetch('presence?id=eq.'+encodeURIComponent(watchName)+'&select=typing,last_seen').then(function(rows){
+    if(!rows||!rows.length){ setConvStatus('Last seen unknown'); return; }
+    var row=rows[0];
+    if(row.typing){ showTypingUI(); }
+    else{
+      hideTypingUI();
+      if(row.last_seen){
+        var diff=Date.now()-new Date(row.last_seen).getTime();
+        if(diff<60000) setConvStatus('Active now');
+        else if(diff<3600000) setConvStatus('Last seen '+Math.floor(diff/60000)+'m ago');
+        else if(diff<86400000) setConvStatus('Last seen '+Math.floor(diff/3600000)+'h ago');
+        else setConvStatus('Last seen '+new Date(row.last_seen).toLocaleDateString());
+      }
+    }
+  }).catch(function(){});
+}
+
+function showTypingUI(){
+  document.getElementById('typingIndicator').classList.add('show');
+  document.getElementById('convStatus').style.display='none';
+  var area=document.getElementById('msgsArea');
+  if(!area.querySelector('.typing-bubble-row')){
+    var row=document.createElement('div'); row.className='typing-bubble-row';
+    var bub=document.createElement('div'); bub.className='typing-bubble';
+    for(var i=0;i<3;i++){var d=document.createElement('div');d.className='tb-dot';bub.appendChild(d);}
+    row.appendChild(bub); area.appendChild(row); area.scrollTop=area.scrollHeight;
+  }
+}
+function hideTypingUI(){
+  document.getElementById('typingIndicator').classList.remove('show');
+  document.getElementById('convStatus').style.display='';
+  var tr=document.querySelector('.typing-bubble-row'); if(tr) tr.remove();
+}
+
+/* ═══ PROFILE AVATAR (join screen) ═══ */
+var joinAvatarDataUrl=null;
+document.getElementById('avatarFileInput').addEventListener('change',function(){
+  var file=this.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    joinAvatarDataUrl=e.target.result;
+    var circle=document.getElementById('joinAvCircle');
+    circle.innerHTML='<img src="'+e.target.result+'"/>';
+    if(me){ me.avatar=e.target.result; saveSession(); updateMyAvUI(); upsertPresence(false); }
+  };
+  reader.readAsDataURL(file);
+});
+
+function updateMyAvUI(){
+  var av=document.getElementById('myAv');
+  if(me&&me.avatar){ av.innerHTML='<img src="'+me.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>'; }
+  else { av.textContent=me?me.name[0].toUpperCase():'?'; }
+}
+
+/* ═══ ADMIN MODAL ═══ */
+function openAdminModal(){ document.getElementById('adminModal').classList.add('show'); document.getElementById('aId').focus(); }
+function closeAdminModal(){ document.getElementById('adminModal').classList.remove('show'); document.getElementById('aErr').textContent=''; }
+function doAdminLogin(){
+  var id=document.getElementById('aId').value.trim(), pw=document.getElementById('aPw').value.trim();
+  if(id===ADM_ID&&pw===ADM_PW){ closeAdminModal(); me={name:ADM_NM,isAdmin:true,avatar:null,lang:'en'}; saveSession(); enterChat(); }
+  else{ document.getElementById('aErr').textContent='Wrong credentials.'; shake(document.querySelector('#adminModal .modal-box')); }
+}
+document.getElementById('aId').addEventListener('keydown',function(e){if(e.key==='Enter')doAdminLogin();});
+document.getElementById('aPw').addEventListener('keydown',function(e){if(e.key==='Enter')doAdminLogin();});
+
+/* ═══ JOIN / LEAVE ═══ */
+function doJoin(){
+  var n=document.getElementById('nameInput').value.trim();
+  if(!n){ document.getElementById('joinErr').textContent='Please enter your name.'; shake(document.querySelector('.login-box')); return; }
+  me={name:n, isAdmin:false, avatar:joinAvatarDataUrl||null, lang:chosenLang};
+  saveSession();
+  requestNotifPermission();
+  upsertPresence(false);
+  enterChat();
+}
+document.getElementById('nameInput').addEventListener('keydown',function(e){if(e.key==='Enter')doJoin();});
+
+function doLeave(){
+  clearInterval(poller); clearInterval(presencePoller); poller=null; presencePoller=null;
+  if(me&&!me.isAdmin) sbFetch('presence?id=eq.'+encodeURIComponent(me.name),{method:'PATCH',body:JSON.stringify({typing:false,last_seen:new Date().toISOString()})}).catch(function(){});
+  me=null; peer=null; replyMsg=null;
+  clearSession(); clearMedia(); cancelReply();
+  document.getElementById('leftPanel').classList.remove('conv-open');
+  document.getElementById('convList').innerHTML='<div class="no-convs"><div class="no-convs-icon">📭</div><span>No conversations yet</span></div>';
+  document.getElementById('msgsArea').innerHTML='';
+  document.getElementById('activeConv').style.display='none';
+  document.getElementById('pickConv').style.display='flex';
+  document.getElementById('nameInput').value='';
+  document.getElementById('aId').value=''; document.getElementById('aPw').value='';
+  document.getElementById('zadeBtn').style.display='flex';
+  joinAvatarDataUrl=null; chosenLang='none';
+  document.getElementById('joinAvCircle').innerHTML='<span id="joinAvLetter">👤</span>';
+  closeSettings();
+  showScreen('joinScreen');
+}
+
+/* ═══ ENTER CHAT ═══ */
+function enterChat(){
+  showScreen('chatScreen');
+  document.getElementById('zadeBtn').style.display='none';
+  updateMyAvUI();
+  document.getElementById('myUsername').textContent=me.name;
+  document.getElementById('leftPanel').classList.remove('conv-open');
+  document.getElementById('activeConv').style.display='none';
+  document.getElementById('pickConv').style.display='flex';
+  if(me.isAdmin){
+    document.getElementById('panelTitle').textContent='All Conversations';
+    loadSidebar();
+    // Add broadcast button if not exists
+    if(!document.getElementById('broadcastBtnEl')){
+      var bb=document.createElement('button');
+      bb.className='broadcast-btn'; bb.id='broadcastBtnEl';
+      bb.innerHTML='📢 Broadcast Message';
+      bb.onclick=openBroadcast;
+      document.getElementById('leftPanel').querySelector('.left-top').appendChild(bb);
+    }
+  }
+  else{ document.getElementById('panelTitle').textContent='Messages'; renderUserSidebar(); openUserConv(); }
+  lastPoll=new Date().toISOString();
+  poller=setInterval(doPoll,2500);
+  requestNotifPermission();
+  setupScrollWatch();
+  presencePoller=setInterval(function(){
+    pollPresence();
+    if(me&&!me.isAdmin) upsertPresence(false); // heartbeat keeps last_seen fresh
+  },4000);
+}
+
+/* ═══ SIDEBAR ═══ */
+function loadSidebar(){
+  sbFetch('messages?select=*&order=created_at.asc').then(function(msgs){
+    var users={};
+    msgs.forEach(function(m){ if(m.sender_name===ADM_NM)return; if(!users[m.sender_name])users[m.sender_name]={name:m.sender_name,last:'',time:''}; users[m.sender_name].last=m.content; users[m.sender_name].time=m.created_at; });
+    var arr=Object.values(users);
+    if(!arr.length){ document.getElementById('convList').innerHTML='<div class="no-convs"><div class="no-convs-icon">📭</div><span>No messages yet</span></div>'; return; }
+    // fetch avatars from presence
+    sbFetch('presence?select=id,avatar').then(function(prows){
+      var avMap={}; (prows||[]).forEach(function(p){ if(p.avatar) avMap[p.id]=p.avatar; });
+      var list=document.getElementById('convList'); list.innerHTML='';
+      arr.forEach(function(u){ list.appendChild(mkConvItem(u.name,u.last,u.time,avMap[u.name]||null)); });
+    }).catch(function(){
+      var list=document.getElementById('convList'); list.innerHTML='';
+      arr.forEach(function(u){ list.appendChild(mkConvItem(u.name,u.last,u.time,null)); });
+    });
+  }).catch(function(e){ console.error(e); });
+}
+
+function mkConvItem(name,lastMsg,time,avatarUrl){
+  var d=document.createElement('div');
+  d.className='conv-item'+(peer===name?' active':'');
+  d.dataset.name=name;
+  var preview=lastMsg&&lastMsg.startsWith('[image]')?'🖼️ Image':lastMsg&&lastMsg.startsWith('[video]')?'🎬 Video':lastMsg&&lastMsg.startsWith('[audio]')?'🎤 Voice note':(lastMsg||'').substring(0,38);
+  var avInner=avatarUrl?'<img src="'+avatarUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>':esc(name[0].toUpperCase());
+  d.innerHTML='<div class="conv-av-wrap"><div class="sring"></div><div class="sring-inner"></div><div class="conv-av">'+avInner+'</div><div class="online-badge"></div></div><div class="conv-info"><div class="conv-name">'+esc(name)+'</div><div class="conv-prev">'+esc(preview)+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;"><div class="conv-time">'+relTime(time)+'</div></div>';
+  d.addEventListener('click',function(){ selectUser(name,avatarUrl); });
+  return d;
+}
+
+function renderUserSidebar(){
+  var list=document.getElementById('convList'); list.innerHTML='';
+  var d=document.createElement('div'); d.className='conv-item active';
+  d.innerHTML='<div class="conv-av-wrap"><div class="sring"></div><div class="sring-inner"></div><div class="conv-av" style="background:linear-gradient(135deg,#0a4f8e,#0d6ebc)">Z</div><div class="online-badge"></div></div><div class="conv-info"><div class="conv-name">Zade</div><div class="conv-prev">Your private chat</div></div>';
+  d.addEventListener('click', function(){ openUserConv(); });
+  list.appendChild(d);
+}
+
+function setHdrAvatar(avatarUrl, letter, bg){
+  var av=document.getElementById('convAvatar'), lel=document.getElementById('convAvatarLetter');
+  var existing=av.querySelector('img.hdr-pfp'); if(existing) existing.remove();
+  if(avatarUrl){
+    lel.style.display='none';
+    var img=document.createElement('img'); img.className='hdr-pfp'; img.src=avatarUrl;
+    img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0;z-index:1;';
+    av.insertBefore(img,av.firstChild);
+  } else {
+    lel.style.display=''; lel.textContent=letter; av.style.background=bg||'linear-gradient(135deg,#1a7fd4,#2AABEE)';
+  }
+}
+
+function selectUser(name, avatarUrl){
+  peer=name;
+  document.querySelectorAll('.conv-item').forEach(function(c){ c.classList.toggle('active',c.dataset.name===name); });
+  setHdrAvatar(avatarUrl||null, name[0].toUpperCase(), 'linear-gradient(135deg,#1a7fd4,#2AABEE)');
+  document.getElementById('convName').textContent=name;
+  setConvStatus('Loading…');
+  document.getElementById('pickConv').style.display='none';
+  document.getElementById('activeConv').style.cssText='display:flex;flex-direction:column;';
+  document.getElementById('leftPanel').classList.add('conv-open');
+  sbFetch('messages?or=(sender_name.eq.'+encodeURIComponent(name)+',reply_to_user.eq.'+encodeURIComponent(name)+')&order=created_at.asc').then(renderMsgs).catch(function(){ showToast('Could not load messages'); });
+}
+
+function openUserConv(){
+  peer=ADM_NM; // set peer so presence polling works
+  setHdrAvatar(null,'Z','linear-gradient(135deg,#0a4f8e,#0d6ebc)');
+  document.getElementById('convName').textContent='Zade';
+  setConvStatus('Active now');
+  document.getElementById('pickConv').style.display='none';
+  document.getElementById('activeConv').style.cssText='display:flex;flex-direction:column;';
+  document.getElementById('leftPanel').classList.add('conv-open');
+  sbFetch('messages?or=(sender_name.eq.'+encodeURIComponent(me.name)+',reply_to_user.eq.'+encodeURIComponent(me.name)+')&order=created_at.asc').then(renderMsgs).catch(function(e){ console.error(e); });
+}
+
+function showPickConv(){ document.getElementById('pickConv').style.display='flex'; document.getElementById('activeConv').style.display='none'; }
+function setConvStatus(txt){ document.getElementById('convStatus').textContent=txt; }
+
+/* ═══ TYPING (send to Supabase) ═══ */
+function onTyping(e){
+  growTA(e.target);
+  if(!me||me.isAdmin) return;
+  upsertPresence(true);
+  clearTimeout(typingTimer);
+  typingTimer=setTimeout(function(){ upsertPresence(false); }, 2500);
+}
+
+function showTypingIndicator(){ showTypingUI(); }
+function hideTypingIndicator(){ hideTypingUI(); }
+
+/* ═══ RENDER MESSAGES ═══ */
+function renderMsgs(msgs){
+  var area=document.getElementById('msgsArea'); area.innerHTML='';
+  if(!msgs||!msgs.length){
+    var nm=peer||'Zade';
+    area.innerHTML='<div class="empty-chat"><div class="empty-chat-av">'+esc(nm[0].toUpperCase())+'</div><div class="empty-chat-name">'+esc(nm)+'</div><div>No messages yet. Say hi!</div></div>';
+    return;
+  }
+  var lastDate='', lastSender='';
+  msgs.forEach(function(m){
+    var ds=new Date(m.created_at).toLocaleDateString();
+    if(ds!==lastDate){ var sep=document.createElement('div'); sep.className='day-divider'; sep.innerHTML='<span>'+(ds===new Date().toLocaleDateString()?'Today':ds)+'</span>'; area.appendChild(sep); lastDate=ds; lastSender=''; }
+    area.appendChild(buildMsgEl(m, m.sender_name!==lastSender));
+    lastSender=m.sender_name;
+    // mark seen: if incoming to me, mark seen in DB
+    if(!me.isAdmin && m.sender_name===ADM_NM && m.id && m.status!=='seen'){
+      markSeen(m.id);
+    }
+  });
+  // smart scroll: if not at bottom, show badge
+  var atBottom=area.scrollHeight-area.scrollTop-area.clientHeight<120;
+  if(atBottom){ area.scrollTop=area.scrollHeight; }
+  else{
+    unreadNewCount+=msgs.length;
+    var uc=document.getElementById('unreadCount');
+    if(uc){ uc.textContent=unreadNewCount; uc.style.display='block'; }
+    document.getElementById('scrollDownBtn').classList.add('show');
+    playNotifSound();
+  }
+}
+
+/* ═══ MESSAGE STATUS ═══ */
+function markSeen(id){
+  sbFetch('messages?id=eq.'+id,{method:'PATCH',body:JSON.stringify({status:'seen'})}).catch(function(){});
+}
+
+function ticksEl(status, isOutgoing){
+  if(!isOutgoing) return null;
+  var el=document.createElement('span');
+  el.className='msg-ticks';
+  if(status==='seen'){ el.classList.add('seen'); el.textContent='✓✓'; el.style.letterSpacing='-3px'; }
+  else if(status==='delivered'){ el.classList.add('delivered'); el.textContent='✓✓'; el.style.letterSpacing='-3px'; }
+  else { el.classList.add('sent'); el.textContent='✓'; el.style.letterSpacing='-3px'; }
+  return el;
+}
+
+/* ═══ BUILD MESSAGE ELEMENT ═══ */
+function buildMsgEl(m, showAv){
+  var isAdm=(m.sender_name===ADM_NM);
+  var isMe=me.isAdmin?isAdm:(m.sender_name===me.name);
+  var row=document.createElement('div');
+  row.className='msg-row '+(isMe?'outgoing':'incoming')+(isAdm&&!me.isAdmin?' admin-msg':'');
+  row.dataset.msgId=m.id;
+  // Right-click context menu
+  row.addEventListener('contextmenu',function(e){ showCtxMenu(e,m); });
+  // Long press (mobile)
+  var lpTimer=null;
+  row.addEventListener('touchstart',function(e){ lpTimer=setTimeout(function(){ showCtxMenu({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY,preventDefault:function(){}},m); haptic(40); },500); },{passive:true});
+  row.addEventListener('touchend',function(){ clearTimeout(lpTimer); });
+  row.addEventListener('touchmove',function(){ clearTimeout(lpTimer); },{passive:true});
+
+  var av=document.createElement('div');
+  av.className='row-av'+(showAv&&!isMe?' show':'');
+  if(isAdm) av.style.background='linear-gradient(135deg,#0a4f8e,#0d6ebc)';
+  av.textContent=m.sender_name[0].toUpperCase();
+  row.appendChild(av);
+
+  var bw=document.createElement('div'); bw.className='bubble-wrap';
+
+  if(m.reply_to_content){
+    var rp=document.createElement('div'); rp.className='rp-wrap';
+    rp.textContent='↩ '+(m.reply_to_content||'').substring(0,50);
+    bw.appendChild(rp);
+  }
+
+  var bubble=document.createElement('div'); bubble.className='bubble';
+  var raw=m.content||'', isText=true;
+
+  if(raw.startsWith('[image]')){
+    isText=false;
+    var img=document.createElement('img'); img.className='chat-img'; img.src=raw.slice(7); img.alt='image';
+    img.onclick=function(){ openViewer('img',img.src); };
+    bubble.appendChild(img);
+  } else if(raw.startsWith('[video]')){
+    isText=false;
+    var vid=document.createElement('video'); vid.src=raw.slice(7); vid.controls=true; vid.style.cssText='max-width:210px;max-height:170px;border-radius:12px;display:block;';
+    bubble.appendChild(vid);
+  } else if(raw.startsWith('[audio]')){
+    isText=false;
+    bubble.appendChild(buildVoicePlayerEl(raw.slice(7)));
+  } else {
+    bubble.textContent=raw;
+    // Link preview
+    var urlMatch=raw.match(/https?:\/\/[^\s]+/);
+    if(urlMatch){ setTimeout(function(){ bw.appendChild(buildLinkPreview(urlMatch[0])); },0); }
+  }
+  bw.appendChild(bubble);
+
+  // footer: time + ticks
+  var footer=document.createElement('div'); footer.className='bubble-footer';
+  var tm=document.createElement('span'); tm.className='bubble-time';
+  tm.textContent=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  footer.appendChild(tm);
+  var ticks=ticksEl(m.status||'sent', isMe);
+  if(ticks) footer.appendChild(ticks);
+  bw.appendChild(footer);
+
+  if(isText&&raw.trim()){
+    var targetLang=me&&me.lang&&me.lang!=='none'?me.lang:null;
+    var toLabelMap={'ar':'→ عربي','fa':'→ فارسی','en':'→ English','es':'→ Español','ru':'→ Русский'};
+    var btnLabel=targetLang?'🌐 '+(toLabelMap[targetLang]||'Translate'):'🌐 Translate';
+    var tbtn=document.createElement('button'); tbtn.className='translate-btn'; tbtn.textContent=btnLabel;
+    var tbox=document.createElement('div'); tbox.className='translation-box'; tbox.style.display='none';
+    tbtn.addEventListener('click',function(){
+      if(tbox.style.display==='block'){tbox.style.display='none';tbtn.textContent=btnLabel;return;}
+      doTranslate(tbtn,tbox,raw,me&&me.lang!=='none'?me.lang:null);
+    });
+    bw.appendChild(tbtn); bw.appendChild(tbox);
+  }
+
+  if(me.isAdmin&&!isAdm){
+    var rb=document.createElement('button'); rb.className='reply-action'; rb.textContent='↩ Reply';
+    rb.addEventListener('click',function(){ startReply(m); }); bw.appendChild(rb);
+  }
+
+  row.appendChild(bw);
+
+  // Swipe to reply (mobile)
+  setupSwipeReply(row, m);
+
+  return row;
+}
+
+/* ═══ SWIPE TO REPLY ═══ */
+function setupSwipeReply(row, m){
+  var startX=0, curX=0, swiping=false, threshold=60;
+  row.addEventListener('touchstart',function(e){ startX=e.touches[0].clientX; swiping=true; curX=startX; },{passive:true});
+  row.addEventListener('touchmove',function(e){
+    if(!swiping) return;
+    curX=e.touches[0].clientX;
+    var dx=curX-startX;
+    var isOut=row.classList.contains('outgoing');
+    // only allow swipe right for incoming, swipe left for outgoing
+    if((!isOut&&dx>0&&dx<threshold+20)||(isOut&&dx<0&&dx>-threshold-20)){
+      var translate=isOut?Math.max(dx,-threshold):Math.min(dx,threshold);
+      row.style.transform='translateX('+translate+'px)';
+      row.style.transition='none';
+    }
+  },{passive:true});
+  row.addEventListener('touchend',function(){
+    if(!swiping) return; swiping=false;
+    var dx=curX-startX;
+    var isOut=row.classList.contains('outgoing');
+    var triggered=(!isOut&&dx>threshold)||(isOut&&dx<-threshold);
+    row.style.transform='';
+    row.style.transition='transform .25s cubic-bezier(.34,1.56,.64,1)';
+    setTimeout(function(){row.style.transition='';},260);
+    if(triggered) startReply(m);
+  });
+}
+
+/* ═══ VOICE PLAYER ═══ */
+function buildVoicePlayerEl(src){
+  var wrap=document.createElement('div'); wrap.className='voice-player';
+  var btn=document.createElement('button'); btn.className='voice-play-btn'; btn.textContent='▶';
+  var wave=document.createElement('div'); wave.className='voice-wave';
+  var heights=[6,10,16,22,18,14,8,12,20,24,18,10,6,14,20,16,10,8,14,18,22,16,10];
+  heights.forEach(function(h){ var bar=document.createElement('div'); bar.className='wave-bar'; bar.style.height=h+'px'; bar.style.opacity=(.4+h/40).toFixed(2); wave.appendChild(bar); });
+  var dur=document.createElement('span'); dur.className='voice-dur'; dur.textContent='0:00';
+  var audio=document.createElement('audio'); audio.src=src; audio.style.display='none';
+  audio.ontimeupdate=function(){ var s=Math.floor(audio.currentTime); dur.textContent=Math.floor(s/60)+':'+(s%60<10?'0':'')+s%60; };
+  audio.onended=function(){ btn.textContent='▶'; };
+  btn.addEventListener('click',function(){ if(audio.paused){audio.play();btn.textContent='⏸';}else{audio.pause();btn.textContent='▶';} });
+  wrap.appendChild(btn); wrap.appendChild(wave); wrap.appendChild(dur); wrap.appendChild(audio);
+  return wrap;
+}
+
+function appendMsgs(msgs){
+  var area=document.getElementById('msgsArea');
+  var ph=area.querySelector('.empty-chat'); if(ph) area.innerHTML='';
+  var lastSender='';
+  msgs.forEach(function(m){
+    area.appendChild(buildMsgEl(m,m.sender_name!==lastSender));
+    lastSender=m.sender_name;
+    if(!me.isAdmin&&m.sender_name===ADM_NM&&m.id&&m.status!=='seen') markSeen(m.id);
+  });
+  area.scrollTop=area.scrollHeight;
+}
+
+/* ═══ TRANSLATION ═══ */
+function doTranslate(btn,box,text,targetLang){
+  btn.setAttribute('data-loading','1'); btn.textContent='🌐…';
+
+  // Auto-detect source language from the text characters
+  var hasFa=/[\u067E\u0686\u0698\u06AF\u06CC\u0649]/.test(text);
+  var hasAr=/[\u0600-\u06FF]/.test(text)&&!hasFa;
+  var hasCyrillic=/[\u0400-\u04FF]/.test(text);
+  var hasLatin=/[a-zA-Z]{2,}/.test(text);
+
+  var sourceLang='en'; // default assume english
+  if(hasFa) sourceLang='fa';
+  else if(hasAr) sourceLang='ar';
+  else if(hasCyrillic) sourceLang='ru';
+
+  // If no target specified, guess opposite
+  var tgt=targetLang||'en';
+  if(tgt===sourceLang){
+    // source and target same — flip to english as fallback
+    tgt=(sourceLang==='en'?'fa':'en');
+  }
+
+  var pair=sourceLang+'|'+tgt;
+  var toLabelMap={'ar':'→ عربي','fa':'→ فارسی','en':'→ English','es':'→ Español','ru':'→ Русский'};
+
+  fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.substring(0,500))+'&langpair='+pair)
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var result=(data.responseData&&data.responseData.translatedText)||'Translation failed.';
+    if(data.responseStatus&&data.responseStatus!==200) result='Could not translate.';
+    box.textContent=result; box.style.display='block';
+    var isRtl=/[\u0600-\u06FF]/.test(result);
+    box.className='translation-box'+(isRtl?' rtl':'');
+    btn.textContent='🌐 '+(toLabelMap[tgt]||'Translated');
+    btn.removeAttribute('data-loading');
+  }).catch(function(){
+    box.textContent='Translation unavailable.'; box.style.display='block';
+    btn.textContent='🌐 Translate'; btn.removeAttribute('data-loading');
+  });
+}
+
+/* ═══ MEDIA ═══ */
+document.getElementById('fileImg').addEventListener('change',function(){ handleFile(this,'image'); });
+document.getElementById('fileVid').addEventListener('change',function(){ handleFile(this,'video'); });
+document.getElementById('imgBtn').addEventListener('click',function(){ document.getElementById('fileImg').click(); });
+if(document.getElementById('addBtn')) document.getElementById('addBtn').addEventListener('click',function(){ document.getElementById('fileImg').click(); });
+document.getElementById('vidBtn').addEventListener('click',function(){ document.getElementById('fileVid').click(); });
+document.getElementById('voiceBtn').addEventListener('click',toggleVoice);
+document.getElementById('sendBtn').addEventListener('click',sendMsg);
+
+function handleFile(input,type){
+  var file=input.files[0]; if(!file) return;
+  if(file.size>5*1024*1024){ showToast('File too large (max 5MB)'); input.value=''; return; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    pendingMedia={type:type,dataUrl:e.target.result,name:file.name};
+    var tw=document.getElementById('mediaThumbWrap'); tw.innerHTML='';
+    if(type==='image'){ var img=document.createElement('img'); img.src=e.target.result; img.className='media-thumb'; tw.appendChild(img); }
+    else{ tw.innerHTML='<span style="font-size:1.6rem">🎬</span>'; }
+    document.getElementById('mediaFileName').textContent=file.name;
+    document.getElementById('mediaPreview').classList.add('on');
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function clearMedia(){ pendingMedia=null; document.getElementById('mediaPreview').classList.remove('on'); document.getElementById('mediaThumbWrap').innerHTML=''; document.getElementById('mediaFileName').textContent=''; }
+
+/* ═══ VOICE RECORDING ═══ */
+function toggleVoice(){ if(!isRecording){startRecording();}else{stopRecording();} }
+function startRecording(){
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    mediaRecorder=new MediaRecorder(stream); audioChunks=[];
+    mediaRecorder.ondataavailable=function(e){ if(e.data.size>0)audioChunks.push(e.data); };
+    mediaRecorder.onstop=function(){
+      var blob=new Blob(audioChunks,{type:'audio/webm'});
+      var reader=new FileReader();
+      reader.onload=function(e2){ pendingMedia={type:'audio',dataUrl:e2.target.result,name:'voice.webm'}; document.getElementById('mediaThumbWrap').innerHTML='<span style="font-size:1.6rem">🎤</span>'; document.getElementById('mediaFileName').textContent='Voice note ready'; document.getElementById('mediaPreview').classList.add('on'); };
+      reader.readAsDataURL(blob);
+      stream.getTracks().forEach(function(t){t.stop();});
+    };
+    mediaRecorder.start(); isRecording=true;
+    var btn=document.getElementById('voiceBtn'); btn.classList.add('recording'); btn.setAttribute('title','Stop recording');
+  }).catch(function(){ showToast('Microphone access denied.'); });
+}
+function stopRecording(){
+  if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  isRecording=false;
+  var btn=document.getElementById('voiceBtn'); btn.classList.remove('recording'); btn.setAttribute('title','Voice');
+}
+
+/* ═══ REPLY ═══ */
+function startReply(msg){
+  replyMsg=msg;
+  document.getElementById('replyBanner').classList.add('on');
+  document.getElementById('replyBannerText').textContent='↩ '+msg.sender_name+': '+(msg.content||'').substring(0,50);
+  document.getElementById('msgInput').focus();
+}
+function cancelReply(){ replyMsg=null; document.getElementById('replyBanner').classList.remove('on'); }
+
+/* ═══ SEND ═══ */
+function sendMsg(){
+  if(editingMsg){ doEdit(); return; }
+  var inp=document.getElementById('msgInput'), content='';
+  if(pendingMedia){
+    if(pendingMedia.type==='image') content='[image]'+pendingMedia.dataUrl;
+    else if(pendingMedia.type==='video') content='[video]'+pendingMedia.dataUrl;
+    else if(pendingMedia.type==='audio') content='[audio]'+pendingMedia.dataUrl;
+    clearMedia();
+  } else {
+    content=inp.value.trim(); if(!content) return;
+  }
+  var payload={sender_name:me.name,content:content,is_admin:me.isAdmin,reply_to_user:null,reply_to_content:null,reply_to_id:null,status:'sent'};
+  if(replyMsg){ payload.reply_to_user=replyMsg.sender_name; payload.reply_to_content=replyMsg.content; payload.reply_to_id=replyMsg.id; }
+  else if(me.isAdmin&&peer){ payload.reply_to_user=peer; }
+  else if(!me.isAdmin){ payload.reply_to_user=ADM_NM; }
+  inp.value=''; growTA(inp); cancelReply();
+  if(me&&!me.isAdmin) upsertPresence(false); // clear typing on send
+  sbFetch('messages',{method:'POST',body:JSON.stringify(payload)}).then(function(res){
+    // after sending, mark as delivered after 1s
+    if(res&&res[0]&&res[0].id){
+      setTimeout(function(){ sbFetch('messages?id=eq.'+res[0].id,{method:'PATCH',body:JSON.stringify({status:'delivered'})}); },1000);
+    }
+  }).catch(function(e){ console.error(e); showToast('⚠ Failed. Run the SQL setup first.'); });
+}
+
+function onMsgKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMsg(); } }
+
+/* ═══ POLLING ═══ */
+function doPoll(){
+  if(!me) return;
+  sbFetch('messages?created_at=gt.'+encodeURIComponent(lastPoll)+'&order=created_at.asc').then(function(news){
+    if(!news||!news.length) return;
+    lastPoll=news[news.length-1].created_at;
+    var hasNew=false;
+    if(me.isAdmin){
+      loadSidebar();
+      if(peer){ var rel=news.filter(function(m){ return m.sender_name===peer||(m.sender_name===ADM_NM&&m.reply_to_user===peer); }); if(rel.length){ appendMsgs(rel); hasNew=true; } }
+      // notify admin of new user messages
+      news.forEach(function(m){ if(m.sender_name!==ADM_NM){ sendNotif('New message from '+m.sender_name, m.content.substring(0,80)); playNotifSound(); haptic(20); } });
+    } else {
+      var rel=news.filter(function(m){ return m.sender_name===me.name||(m.sender_name===ADM_NM&&m.reply_to_user===me.name); });
+      if(rel.length){ appendMsgs(rel); hasNew=true; rel.forEach(function(m){ if(m.sender_name===ADM_NM){ sendNotif('Zade', m.content.substring(0,80)); playNotifSound(); haptic(20); } }); }
+    }
+    // update ticks on my sent messages
+    if(me.isAdmin) updateTicksFromPoll(news);
+  }).catch(function(){});
+}
+
+function updateTicksFromPoll(msgs){
+  msgs.forEach(function(m){
+    if(m.status==='seen'||m.status==='delivered'){
+      var row=document.querySelector('.msg-row[data-msg-id="'+m.id+'"]');
+      if(row){ var ticks=row.querySelector('.msg-ticks'); if(ticks){ ticks.textContent=m.status==='seen'?'✓✓':'✓✓'; ticks.className='msg-ticks '+(m.status==='seen'?'seen':'delivered'); } }
+    }
+  });
+}
+
+/* ═══ MEDIA VIEWER ═══ */
+function openViewer(type,src){
+  var v=document.getElementById('mediaViewer'),vc=document.getElementById('viewerContent'); vc.innerHTML='';
+  if(type==='img'){ var img=document.createElement('img'); img.src=src; vc.appendChild(img); }
+  else{ var vid=document.createElement('video'); vid.src=src; vid.controls=true; vc.appendChild(vid); }
+  v.classList.add('open');
+  v.onclick=function(e){ if(e.target===v) closeViewer(); };
+}
+function closeViewer(){ document.getElementById('mediaViewer').classList.remove('open'); document.getElementById('viewerContent').innerHTML=''; }
+
+
+/* ═══ GLOBAL STATE ═══ */
+var ctxMsg=null, editingMsg=null, pinnedMsg=null;
+var unreadNewCount=0, mutedConvs={};
+var REACTIONS=['❤️','😂','👍','🔥','😮','😢','🎉','👏'];
+
+/* ═══ CONTEXT MENU ═══ */
+function showCtxMenu(e, m){
+  ctxMsg=m;
+  var menu=document.getElementById('ctxMenu');
+  // show/hide edit only for own messages
+  var isMe=me.isAdmin?(m.sender_name===ADM_NM):(m.sender_name===me.name);
+  menu.querySelectorAll('.ctx-item').forEach(function(i){
+    if(i.textContent.includes('Edit')) i.style.display=isMe&&!m.content.startsWith('[image]')&&!m.content.startsWith('[video]')&&!m.content.startsWith('[audio]')?'flex':'none';
+    if(i.textContent.includes('Delete')) i.style.display=isMe||me.isAdmin?'flex':'none';
+  });
+  var x=Math.min(e.clientX, window.innerWidth-175);
+  var y=Math.min(e.clientY, window.innerHeight-260);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+  menu.classList.add('show');
+  e.preventDefault();
+}
+document.addEventListener('click',function(e){ if(!document.getElementById('ctxMenu').contains(e.target)) closeCtxMenu(); });
+document.addEventListener('contextmenu',function(e){ if(!e.target.closest('.msg-row')) closeCtxMenu(); });
+function closeCtxMenu(){ document.getElementById('ctxMenu').classList.remove('show'); document.getElementById('emojiPicker').classList.remove('show'); }
+
+function ctxReply(){ if(ctxMsg){startReply(ctxMsg);} closeCtxMenu(); }
+function ctxCopy(){ if(ctxMsg&&ctxMsg.content){ navigator.clipboard&&navigator.clipboard.writeText(ctxMsg.content).catch(function(){}); showToast('Copied!'); } closeCtxMenu(); }
+function ctxPin(){ if(ctxMsg){ pinMsg(ctxMsg); } closeCtxMenu(); }
+function ctxDelete(){ if(ctxMsg){ deleteMsg(ctxMsg); } closeCtxMenu(); }
+function ctxEdit(){ if(ctxMsg){ startEdit(ctxMsg); } closeCtxMenu(); }
+function ctxReact(){
+  if(!ctxMsg) return;
+  showEmojiPicker(ctxMsg);
+  document.getElementById('ctxMenu').classList.remove('show');
+}
+
+/* ═══ REACTIONS ═══ */
+function showEmojiPicker(m){
+  var picker=document.getElementById('emojiPicker');
+  picker.innerHTML='';
+  var row=document.querySelector('.msg-row[data-msg-id="'+m.id+'"]');
+  REACTIONS.forEach(function(em){
+    var btn=document.createElement('div'); btn.className='ep-emoji'; btn.textContent=em;
+    btn.onclick=function(){ toggleReaction(m,em); picker.classList.remove('show'); };
+    picker.appendChild(btn);
+  });
+  if(row){
+    var rect=row.getBoundingClientRect();
+    var isOut=row.classList.contains('outgoing');
+    picker.style.top=(rect.top-60)+'px';
+    picker.style.left=isOut?(rect.right-230)+'px':(rect.left+5)+'px';
+  }
+  picker.classList.add('show');
+}
+
+var reactionsMap={}; // msgId -> {emoji: [names]}
+function toggleReaction(m,emoji){
+  var id=m.id;
+  if(!reactionsMap[id]) reactionsMap[id]={};
+  var who=reactionsMap[id][emoji]||[];
+  var myName=me.name;
+  var idx=who.indexOf(myName);
+  if(idx>=0) who.splice(idx,1);
+  else who.push(myName);
+  reactionsMap[id][emoji]=who;
+  // re-render reaction bar
+  var row=document.querySelector('.msg-row[data-msg-id="'+id+'"]');
+  if(row) renderReactionBar(row,id);
+  // haptic
+  if(navigator.vibrate) navigator.vibrate(30);
+}
+
+function renderReactionBar(row,msgId){
+  var existing=row.querySelector('.reaction-bar'); if(existing) existing.remove();
+  var map=reactionsMap[msgId]||{};
+  var hasAny=Object.values(map).some(function(a){return a.length>0;});
+  if(!hasAny) return;
+  var bar=document.createElement('div'); bar.className='reaction-bar';
+  var bw=row.querySelector('.bubble-wrap'); if(!bw) return;
+  Object.entries(map).forEach(function(e){
+    var emoji=e[0], names=e[1]; if(!names.length) return;
+    var chip=document.createElement('div'); chip.className='reaction-chip';
+    if(names.includes(me.name)) chip.classList.add('mine');
+    chip.innerHTML='<span class="rc">'+emoji+'</span><span class="rn">'+names.length+'</span>';
+    chip.title=names.join(', ');
+    chip.onclick=function(){ toggleReaction({id:msgId},emoji); };
+    bar.appendChild(chip);
+  });
+  bw.appendChild(bar);
+}
+
+/* ═══ DELETE MESSAGE ═══ */
+function deleteMsg(m){
+  if(!confirm('Delete this message?')) return;
+  sbFetch('messages?id=eq.'+m.id,{method:'DELETE'}).then(function(){
+    var row=document.querySelector('.msg-row[data-msg-id="'+m.id+'"]');
+    if(row){ row.style.opacity='0'; row.style.transform='scale(.9)'; row.style.transition='all .2s'; setTimeout(function(){row.remove();},200); }
+    showToast('Message deleted');
+    if(me.isAdmin) loadSidebar();
+  }).catch(function(){ showToast('Could not delete'); });
+}
+
+/* ═══ EDIT MESSAGE ═══ */
+function startEdit(m){
+  editingMsg=m;
+  var inp=document.getElementById('msgInput');
+  inp.value=m.content; growTA(inp); inp.focus();
+  document.getElementById('editingBanner').classList.add('on');
+  document.getElementById('editingBannerText').textContent='✏️ Editing: "'+m.content.substring(0,40)+'"';
+}
+function cancelEdit(){ editingMsg=null; document.getElementById('editingBanner').classList.remove('on'); document.getElementById('msgInput').value=''; growTA(document.getElementById('msgInput')); }
+function doEdit(){
+  var content=document.getElementById('msgInput').value.trim();
+  if(!content) return;
+  sbFetch('messages?id=eq.'+editingMsg.id,{method:'PATCH',body:JSON.stringify({content:content})}).then(function(){
+    var row=document.querySelector('.msg-row[data-msg-id="'+editingMsg.id+'"]');
+    if(row){ var b=row.querySelector('.bubble'); if(b){ b.textContent=content; b.classList.add('edited'); } }
+    cancelEdit(); showToast('Message updated');
+  }).catch(function(){ showToast('Could not edit'); });
+}
+
+/* ═══ PIN MESSAGE ═══ */
+function pinMsg(m){
+  pinnedMsg=m;
+  var text=m.content.startsWith('[')?'📎 Media':m.content.substring(0,60);
+  document.getElementById('pinnedText').textContent=text;
+  document.getElementById('pinnedBar').classList.add('show');
+  showToast('Message pinned 📌');
+}
+function unpinMsg(){ pinnedMsg=null; document.getElementById('pinnedBar').classList.remove('show'); }
+function scrollToPinned(){
+  if(!pinnedMsg) return;
+  var row=document.querySelector('.msg-row[data-msg-id="'+pinnedMsg.id+'"]');
+  if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.style.background='rgba(42,171,238,.18)'; setTimeout(function(){row.style.background='';},1500); }
+}
+
+/* ═══ MESSAGE SEARCH ═══ */
+function toggleSearch(){
+  var bar=document.getElementById('searchBar');
+  bar.classList.toggle('show');
+  if(bar.classList.contains('show')) document.getElementById('searchInput').focus();
+  else{ document.getElementById('searchInput').value=''; doSearch(''); }
+}
+function doSearch(q){
+  q=q.toLowerCase().trim();
+  document.querySelectorAll('.msg-row').forEach(function(row){
+    var b=row.querySelector('.bubble');
+    if(!b) return;
+    if(!q){ row.style.display=''; b.querySelectorAll('.search-highlight').forEach(function(h){ h.outerHTML=h.textContent; }); return; }
+    var text=b.textContent.toLowerCase();
+    row.style.display=text.includes(q)?'':'none';
+  });
+}
+
+/* ═══ LINK PREVIEW ═══ */
+var URL_REGEX=/https?:\/\/[^\s]+/g;
+function buildLinkPreview(url){
+  var wrap=document.createElement('div'); wrap.className='link-preview';
+  wrap.onclick=function(){ window.open(url,'_blank'); };
+  try{
+    var u=new URL(url);
+    wrap.innerHTML='<div class="lp-domain">'+u.hostname.replace('www.','')+'</div><div class="lp-title">'+u.hostname+'</div><div class="lp-desc">'+url+'</div>';
+  }catch(e){ wrap.textContent=url; }
+  return wrap;
+}
+
+/* ═══ SCROLL TO BOTTOM ═══ */
+function scrollToBottom(){
+  var area=document.getElementById('msgsArea');
+  area.scrollTo({top:area.scrollHeight,behavior:'smooth'});
+  unreadNewCount=0;
+  var uc=document.getElementById('unreadCount'); if(uc){uc.style.display='none';uc.textContent='';}
+  document.getElementById('scrollDownBtn').classList.remove('show');
+}
+function setupScrollWatch(){
+  var area=document.getElementById('msgsArea');
+  area.addEventListener('scroll',function(){
+    var atBottom=area.scrollHeight-area.scrollTop-area.clientHeight<80;
+    document.getElementById('scrollDownBtn').classList.toggle('show',!atBottom);
+    if(atBottom){
+      unreadNewCount=0;
+      var uc=document.getElementById('unreadCount'); if(uc){uc.style.display='none';}
+    }
+  });
+}
+
+/* ═══ BROADCAST (admin) ═══ */
+function openBroadcast(){ document.getElementById('broadcastOverlay').classList.add('show'); document.getElementById('broadcastInput').focus(); }
+function closeBroadcast(){ document.getElementById('broadcastOverlay').classList.remove('show'); document.getElementById('broadcastInput').value=''; }
+function sendBroadcast(){
+  var msg=document.getElementById('broadcastInput').value.trim();
+  if(!msg){ showToast('Enter a message'); return; }
+  // get all unique user names
+  sbFetch('messages?select=sender_name&is_admin=eq.false').then(function(rows){
+    var users=[...new Set((rows||[]).map(function(r){return r.sender_name;}))];
+    if(!users.length){ showToast('No users to broadcast to'); return; }
+    var promises=users.map(function(u){
+      return sbFetch('messages',{method:'POST',body:JSON.stringify({sender_name:ADM_NM,content:msg,is_admin:true,reply_to_user:u,status:'sent'})});
+    });
+    Promise.all(promises).then(function(){ closeBroadcast(); showToast('📢 Broadcast sent to '+users.length+' users!'); loadSidebar(); }).catch(function(){ showToast('Broadcast failed'); });
+  });
+}
+
+/* ═══ HAPTIC FEEDBACK ═══ */
+function haptic(pattern){ try{ navigator.vibrate&&navigator.vibrate(pattern||20); }catch(e){} }
+
+/* ═══ NOTIFICATION SOUND ═══ */
+function playNotifSound(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var osc=ctx.createOscillator(); var gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440,ctx.currentTime+0.15);
+    gain.gain.setValueAtTime(0.15,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.3);
+  }catch(e){}
+}
+
+/* ═══ UTILS ═══ */
+function showScreen(id){ document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');}); document.getElementById(id).classList.add('active'); }
+function showLeftPanel(){
+  document.getElementById('leftPanel').classList.remove('conv-open');
+  // on mobile, hide chat so sidebar shows cleanly
+  if(window.innerWidth<=768){
+    document.getElementById('activeConv').style.cssText='display:none;flex-direction:column;';
+  }
+}
+function growTA(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,96)+'px'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function shake(el){ el.style.animation='none'; void el.offsetWidth; el.style.animation='shake .4s ease'; }
+function relTime(iso){ if(!iso)return''; var d=Date.now()-new Date(iso).getTime(); if(d<60000)return'now'; if(d<3600000)return Math.floor(d/60000)+'m'; if(d<86400000)return Math.floor(d/3600000)+'h'; return Math.floor(d/86400000)+'d'; }
+function showToast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},3500); }
+
+function showConvInfo(){
+  var name=document.getElementById('convName').textContent;
+  var status=document.getElementById('convStatus').textContent;
+  showToast(name + ' · ' + status);
+}
+
+/* ═══ PULL TO REFRESH ═══ */
+(function(){
+  var area, startY=0, pulling=false, threshold=70;
+  document.addEventListener('DOMContentLoaded',function(){
+    area=document.getElementById('msgsArea');
+    if(!area) return;
+    area.addEventListener('touchstart',function(e){ if(area.scrollTop===0) startY=e.touches[0].clientY; },{passive:true});
+    area.addEventListener('touchmove',function(e){ if(area.scrollTop===0 && e.touches[0].clientY-startY>threshold && !pulling){ pulling=true; showToast('Refreshing…'); } },{passive:true});
+    area.addEventListener('touchend',function(){
+      if(pulling){ pulling=false;
+        if(me&&me.isAdmin&&peer) selectUser(peer, null);
+        else if(me&&!me.isAdmin) openUserConv();
+      }
+    });
+  });
+})();
+</script>
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  RUN IN SUPABASE SQL EDITOR:                                 ║
+║                                                              ║
+║  CREATE TABLE IF NOT EXISTS messages (                       ║
+║    id               BIGSERIAL PRIMARY KEY,                   ║
+║    sender_name      TEXT NOT NULL,                           ║
+║    content          TEXT NOT NULL,                           ║
+║    is_admin         BOOLEAN DEFAULT FALSE,                   ║
+║    reply_to_user    TEXT,                                    ║
+║    reply_to_content TEXT,                                    ║
+║    reply_to_id      BIGINT,                                  ║
+║    status           TEXT DEFAULT 'sent',                     ║
+║    created_at       TIMESTAMPTZ DEFAULT NOW()                ║
+║  );                                                          ║
+║  ALTER TABLE messages ENABLE ROW LEVEL SECURITY;             ║
+║  CREATE POLICY "allow_all" ON messages                       ║
+║    FOR ALL USING (true) WITH CHECK (true);                   ║
+║                                                              ║
+║  CREATE TABLE IF NOT EXISTS presence (                       ║
+║    id        TEXT PRIMARY KEY,                               ║
+║    typing    BOOLEAN DEFAULT FALSE,                          ║
+║    last_seen TIMESTAMPTZ DEFAULT NOW(),                      ║
+║    avatar    TEXT                                            ║
+║  );                                                          ║
+║  ALTER TABLE presence ENABLE ROW LEVEL SECURITY;             ║
+║  CREATE POLICY "allow_all_presence" ON presence              ║
+║    FOR ALL USING (true) WITH CHECK (true);                   ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+</body>
+</html>
